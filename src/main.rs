@@ -66,7 +66,7 @@ fn main() -> Result<()> {
             );
 
             frame.render_widget(
-                Paragraph::new("Press 'q' to exit")
+                Paragraph::new("Press Esc to exit")
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
                     .alignment(Alignment::Left),
                 outer_layout[3],
