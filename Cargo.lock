@@ -399,6 +399,17 @@ name = "terminal_weather"
 version = "0.1.0"
 dependencies = [
  "ratatui",
+ "tui-input",
+]
+
+[[package]]
+name = "tui-input"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68699e8bb4ca025ab41fcc602d3d53a5714a56b0cf2d6e93c98aaf4231e3d937"
+dependencies = [
+ "ratatui",
+ "unicode-width",
 ]
 
 [[package]]
