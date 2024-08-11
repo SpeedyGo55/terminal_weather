@@ -37,7 +37,10 @@ fn main() -> Result<()> {
         if let Event::Key(KeyEvent { code, ..}) = event {
             match code {
                 KeyCode::Esc => break,
-                KeyCode::Enter => {},
+                KeyCode::Enter => {
+                    //TODO: Fetch weather data
+                    input.clear();
+                },
                 _ => {
                     input.handle_event(&event);
                 }
@@ -53,8 +56,7 @@ fn main() -> Result<()> {
                         Constraint::Length(3),
                         Constraint::Min(0),
                         Constraint::Length(1),
-                    ]
-                        .as_ref(),
+                    ].as_ref(),
                 )
                 .split(frame.size());
 
@@ -66,10 +68,11 @@ fn main() -> Result<()> {
             );
 
             frame.render_widget(
-                Paragraph::new("Press Esc to exit")
+                Paragraph::new(input.value())
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
-                    .alignment(Alignment::Left),
-                outer_layout[3],
+                    .block(Block::default().borders(Borders::ALL).title("Search"))
+                    .alignment(Alignment::Center),
+                outer_layout[1],
             );
 
             frame.render_widget(
@@ -80,14 +83,14 @@ fn main() -> Result<()> {
             );
 
             frame.render_widget(
-                Paragraph::new(input.value())
+                Paragraph::new("Press Esc to exit")
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
-                    .block(Block::default().borders(Borders::ALL).title("Search"))
-                    .alignment(Alignment::Center),
-                outer_layout[1],
+                    .alignment(Alignment::Left),
+                outer_layout[3],
             );
         })?;
     }
+
     stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
     Ok(())
