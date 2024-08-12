@@ -1,4 +1,3 @@
-use std::fmt::format;
 // A Weather App in the terminal using Ratatui and Tui-Inputy
 use ratatui::{
     backend::CrosstermBackend,
@@ -7,7 +6,6 @@ use ratatui::{
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
         ExecutableCommand,
     },
-    style::Stylize,
     widgets::{Paragraph, Block, Borders},
     Terminal,
     prelude::*,
@@ -15,15 +13,15 @@ use ratatui::{
 
 use std::io::{stdout, Result, Write};
 use ratatui::crossterm::event::Event;
-use tui_input::backend::crossterm as backend;
 use tui_input::backend::crossterm::EventHandler;
 use tui_input::Input;
-use ratatui::widgets::Wrap;
+use ratatui::widgets::{Axis, Chart, Dataset, GraphType};
 
 use json;
-use json::JsonResult;
 
-use reqwest::{Error, Response};
+use reqwest::Response;
+
+use itertools::Itertools;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -35,6 +33,8 @@ async fn main() -> Result<()> {
     let mut current_weather_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
     response = reqwest::get(format!("https://api.openweathermap.org/data/2.5/forecast?q=Basel&appid={}", api_key)).await.unwrap();
     let mut forecast_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
+    
+    println!("{}", current_weather_data);
 
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
@@ -69,23 +69,23 @@ async fn main() -> Result<()> {
                 .margin(0)
                 .constraints(
                     [
-                        Constraint::Length(3),
-                        Constraint::Length(3),
-                        Constraint::Length(3),
-                        Constraint::Min(0),
-                        Constraint::Length(1),
+                        Constraint::Length(3), // Header
+                        Constraint::Length(3), // Search
+                        Constraint::Length(3), // Weather Info
+                        Constraint::Min(0), // Forecast
+                        Constraint::Length(1), // Footer
                     ].as_ref(),
                 )
-                .split(frame.size());
+                .split(frame.area());
 
             let header_layout = Layout::default()
                 .direction(Direction::Horizontal)
                 .margin(0)
                 .constraints(
                     [
-                        Constraint::Percentage(33), // Temperature Big
-                        Constraint::Percentage(33), // City
-                        Constraint::Percentage(33) // Weather Icon
+                        Constraint::Fill(1), // Temperature Big
+                        Constraint::Fill(1), // City
+                        Constraint::Fill(1) // Weather Icon
                     ].as_ref(),
                 )
                 .split(outer_layout[0]);
@@ -108,11 +108,99 @@ async fn main() -> Result<()> {
                 .margin(0)
                 .constraints(
                     [
-                        Constraint::Percentage(50), // Temperature over 5 days
-                        Constraint::Percentage(50), // Rain over 5 days
+                        Constraint::Percentage(50), // Temperature over 5 days as a graph
+                        Constraint::Percentage(50), // Rain over 5 days as a graph
                     ].as_ref(),
                 )
                 .split(outer_layout[3]);
+            
+            // the forecast data is in 3 hour intervals. We want to get the average temperature for each day, structured as a list of tuples (pos on x, temperature): &[(f64, f64)]
+            
+            let mut forecast_temp_vec: Vec<(f64, f64)> = Vec::new();
+            
+            for i in 0..forecast_data["list"].len() {
+                let temp = forecast_data["list"][i]["main"]["temp"].as_f64().unwrap()-273.15;
+                forecast_temp_vec.push((i as f64, temp));
+            }
+            
+            let forecast_temp_list: &mut [(f64, f64); 40] = &mut [(0.0, 0.0); 40];
+            
+            forecast_temp_list.iter_mut().set_from(forecast_temp_vec.iter().cloned());
+            
+            let forecast_temp_dataset = Dataset::default()
+                .name("Temperature")
+                .marker(symbols::Marker::Braille)
+                .graph_type(GraphType::Line)
+                .style(Style::default().fg(Color::Yellow))
+                .data(forecast_temp_list);
+            
+            let temp_x_axis = Axis::default()
+                .title("Time")
+                .style(Style::default().fg(Color::White))
+                .bounds([0.0, 40.0])
+                .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]);
+            
+            let temp_y_axis = Axis::default()
+                .title("Temperature")
+                .style(Style::default().fg(Color::White))
+                .bounds([0.0, 50.0])
+                .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]);
+            
+            let temp_chart = Chart::new(Vec::from([forecast_temp_dataset]))
+                .block(
+                    Block::default()
+                        .title("Temperature over 5 days")
+                        .title_style(Style::default().fg(Color::White))
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(Color::White)),
+                )
+                .x_axis(temp_x_axis)
+                .y_axis(temp_y_axis)
+                .style(Style::default().fg(Color::White));
+            
+            let mut forecast_rain_vec: Vec<(f64, f64)> = Vec::new();
+
+            for i in 0..forecast_data["list"].len() {
+                let rain = forecast_data["list"][i]["rain"]["1h"].as_f64().unwrap_or(0.0);
+                forecast_rain_vec.push((i as f64, rain));
+            }
+            
+            let forecast_rain_list: &mut [(f64, f64); 40] = &mut [(0.0, 0.0); 40];
+            
+            forecast_rain_list.iter_mut().set_from(forecast_rain_vec.iter().cloned());
+            
+            let forecast_rain_dataset = Dataset::default()
+                .name("Rain")
+                .marker(symbols::Marker::Braille)
+                .graph_type(GraphType::Line)
+                .style(Style::default().fg(Color::Blue))
+                .data(forecast_rain_list);
+            
+            let rain_x_axis = Axis::default()
+                .title("Time")
+                .style(Style::default().fg(Color::White))
+                .bounds([0.0, 40.0])
+                .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]);
+            
+            let rain_y_axis = Axis::default()
+                .title("Rain")
+                .style(Style::default().fg(Color::White))
+                .bounds([0.0, 10.0])
+                .labels(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+            
+            let rain_chart = Chart::new(Vec::from([forecast_rain_dataset]))
+                .block(
+                    Block::default()
+                        .title("Rain over 5 days")
+                        .title_style(Style::default().fg(Color::White))
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(Color::White)),
+                )
+                .x_axis(rain_x_axis)
+                .y_axis(rain_y_axis)
+                .style(Style::default().fg(Color::White));
+            
+            
 
             frame.render_widget(
                 Paragraph::new(format!("{:.2} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15))
@@ -144,6 +232,49 @@ async fn main() -> Result<()> {
                     .block(Block::default().borders(Borders::ALL).title("Search"))
                     .alignment(Alignment::Center),
                 outer_layout[1],
+            );
+            
+            frame.render_widget(
+                Paragraph::new(format!("Temperature: {:.2} C° Feels like: {:.2} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15, current_weather_data["main"]["feels_like"].as_f64().unwrap()-273.15))
+                    .style(Style::default().fg(Color::White).bg(Color::Blue))
+                    .block(Block::default().borders(Borders::ALL).title("Temperature"))
+                    .alignment(Alignment::Center),
+                weather_info_layout[0],
+            );
+            
+            frame.render_widget(
+                Paragraph::new(format!("Humidity: {}%", current_weather_data["main"]["humidity"].as_i64().unwrap()))
+                    .style(Style::default().fg(Color::White).bg(Color::Blue))
+                    .block(Block::default().borders(Borders::ALL).title("Humidity"))
+                    .alignment(Alignment::Center),
+                weather_info_layout[1],
+            );
+            
+            frame.render_widget(
+                Paragraph::new(format!("Rain: {}mm", current_weather_data["rain"]["1h"].as_f64().unwrap_or(0.0)))
+                    .style(Style::default().fg(Color::White).bg(Color::Blue))
+                    .block(Block::default().borders(Borders::ALL).title("Rain"))
+                    .alignment(Alignment::Center),
+                weather_info_layout[2],
+            );
+            
+            frame.render_widget(
+                Paragraph::new(format!("Wind Speed: {}m/s Direction: {}°", current_weather_data["wind"]["speed"].as_f64().unwrap_or(0.0), current_weather_data["wind"]["deg"].as_f64().unwrap_or(0.0)))
+                    .style(Style::default().fg(Color::White).bg(Color::Blue))
+                    .block(Block::default().borders(Borders::ALL).title("Wind Speed"))
+                    .alignment(Alignment::Center),
+                weather_info_layout[3],
+            );
+            
+            
+            frame.render_widget(
+                temp_chart,
+                forecast_layout[0],
+            );
+            
+            frame.render_widget(
+                rain_chart,
+                forecast_layout[1],
             );
 
             frame.render_widget(
