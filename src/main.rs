@@ -161,7 +161,7 @@ async fn main() -> Result<()> {
             let mut forecast_rain_vec: Vec<(f64, f64)> = Vec::new();
 
             for i in 0..forecast_data["list"].len() {
-                let rain = forecast_data["list"][i]["rain"]["1h"].as_f64().unwrap_or(0.0);
+                let rain = forecast_data["list"][i]["rain"]["3h"].as_f64().unwrap_or(0.0);
                 forecast_rain_vec.push((i as f64, rain));
             }
             
