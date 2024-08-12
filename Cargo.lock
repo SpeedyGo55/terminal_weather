@@ -1146,6 +1146,7 @@ dependencies = [
 name = "terminal_weather"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "json",
  "ratatui",
  "reqwest",
