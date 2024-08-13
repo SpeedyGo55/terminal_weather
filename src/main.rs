@@ -1,29 +1,24 @@
-// A Weather App in the terminal using Ratatui and Tui-Inputy
+// A Weather App in the terminal using Ratatui and Tui-Input
+use std::io::{Result, stdout, Write};
+
+use itertools::Itertools;
+use json;
 use ratatui::{
     backend::CrosstermBackend,
     crossterm::{
         event::{self, KeyCode, KeyEvent},
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
         ExecutableCommand,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
-    widgets::{Paragraph, Block, Borders},
-    Terminal,
     prelude::*,
+    Terminal,
+    widgets::{Block, Borders, Paragraph},
 };
-
-use std::io::{stdout, Result, Write};
-use std::string;
 use ratatui::crossterm::event::Event;
+use ratatui::widgets::{Axis, Chart, Dataset, GraphType};
+use reqwest::Response;
 use tui_input::backend::crossterm::EventHandler;
 use tui_input::Input;
-use ratatui::widgets::{Axis, Chart, Dataset, GraphType};
-
-use json;
-
-use reqwest::Response;
-
-use itertools::Itertools;
-use json::stringify;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,7 +38,7 @@ async fn main() -> Result<()> {
     let mut stdout_var = stdout_var.lock();
     terminal.clear()?;
 
-    let temp_x_axis = Axis::default()
+    let x_axis = Axis::default()
         .title("Time [D]")
         .style(Style::default().fg(Color::White))
         .bounds([0.0, 40.0])
@@ -54,12 +49,6 @@ async fn main() -> Result<()> {
         .style(Style::default().fg(Color::White))
         .bounds([0.0, 50.0])
         .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]);
-
-    let rain_x_axis = Axis::default()
-        .title("Time [D]")
-        .style(Style::default().fg(Color::White))
-        .bounds([0.0, 40.0])
-        .labels(["0", "1", "2", "3", "4", "5"]);
 
     let rain_y_axis = Axis::default()
         .title("Rain [mm]")
@@ -179,7 +168,7 @@ async fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .border_style(Style::default().fg(Color::White)),
                 )
-                .x_axis(temp_x_axis.clone())
+                .x_axis(x_axis.clone())
                 .y_axis(temp_y_axis.clone())
                 .style(Style::default().fg(Color::White));
             
@@ -209,7 +198,7 @@ async fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .border_style(Style::default().fg(Color::White)),
                 )
-                .x_axis(rain_x_axis.clone())
+                .x_axis(x_axis.clone())
                 .y_axis(rain_y_axis.clone())
                 .style(Style::default().fg(Color::White));
             
