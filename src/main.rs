@@ -97,7 +97,7 @@ async fn main() -> Result<()> {
                     [
                         Constraint::Length(3), // Header
                         Constraint::Length(3), // Search
-                        Constraint::Length(3), // Weather Info
+                        Constraint::Length(4), // Weather Info
                         Constraint::Min(0), // Forecast
                         Constraint::Length(1), // Footer
                     ].as_ref(),
@@ -201,8 +201,6 @@ async fn main() -> Result<()> {
                 .x_axis(x_axis.clone())
                 .y_axis(rain_y_axis.clone())
                 .style(Style::default().fg(Color::White));
-            
-            
 
             frame.render_widget(
                 Paragraph::new(format!("{:.1} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15))
@@ -237,7 +235,7 @@ async fn main() -> Result<()> {
             );
             
             frame.render_widget(
-                Paragraph::new(format!("Temperature: {:.1} C° Feels like: {:.1} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15, current_weather_data["main"]["feels_like"].as_f64().unwrap()-273.15))
+                Paragraph::new(format!("Temperature: {:.1} C° \n Feels like: {:.1} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15, current_weather_data["main"]["feels_like"].as_f64().unwrap()-273.15))
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
                     .block(Block::default().borders(Borders::ALL).title("Temperature"))
                     .alignment(Alignment::Center),
@@ -245,7 +243,7 @@ async fn main() -> Result<()> {
             );
             
             frame.render_widget(
-                Paragraph::new(format!("Humidity: {}%", current_weather_data["main"]["humidity"].as_i64().unwrap()))
+                Paragraph::new(format!("Humidity:\n {}%", current_weather_data["main"]["humidity"].as_i64().unwrap()))
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
                     .block(Block::default().borders(Borders::ALL).title("Humidity"))
                     .alignment(Alignment::Center),
@@ -253,7 +251,7 @@ async fn main() -> Result<()> {
             );
             
             frame.render_widget(
-                Paragraph::new(format!("Rain: {}mm", current_weather_data["rain"]["1h"].as_f64().unwrap_or(0.0)))
+                Paragraph::new(format!("Rain:\n {}mm", current_weather_data["rain"]["1h"].as_f64().unwrap_or(0.0)))
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
                     .block(Block::default().borders(Borders::ALL).title("Rain"))
                     .alignment(Alignment::Center),
@@ -261,9 +259,9 @@ async fn main() -> Result<()> {
             );
             
             frame.render_widget(
-                Paragraph::new(format!("Wind Speed: {}m/s Direction: {}°", current_weather_data["wind"]["speed"].as_f64().unwrap_or(0.0), current_weather_data["wind"]["deg"].as_f64().unwrap_or(0.0)))
+                Paragraph::new(format!("Wind Speed: {}m/s \n Direction: {}°", current_weather_data["wind"]["speed"].as_f64().unwrap_or(0.0), current_weather_data["wind"]["deg"].as_f64().unwrap_or(0.0)))
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
-                    .block(Block::default().borders(Borders::ALL).title("Wind Speed"))
+                    .block(Block::default().borders(Borders::ALL).title("Wind"))
                     .alignment(Alignment::Center),
                 weather_info_layout[3],
             );
