@@ -44,22 +44,22 @@ async fn main() -> Result<()> {
     terminal.clear()?;
 
     let temp_x_axis = Axis::default()
-        .title("Time")
+        .title("Time [D]")
         .style(Style::default().fg(Color::White))
         .bounds([0.0, 40.0])
-        .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]); 
+        .labels(["0", "1", "2", "3", "4", "5"]); 
 
     let temp_y_axis = Axis::default()
-        .title("Temperature")
+        .title("Temperature [C°]")
         .style(Style::default().fg(Color::White))
         .bounds([0.0, 50.0])
         .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]);
 
     let rain_x_axis = Axis::default()
-        .title("Time [h]")
+        .title("Time [D]")
         .style(Style::default().fg(Color::White))
         .bounds([0.0, 40.0])
-        .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]);
+        .labels(["0", "1", "2", "3", "4", "5"]);
 
     let rain_y_axis = Axis::default()
         .title("Rain [mm]")
@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
         .bounds([0.0, 10.0])
         .labels(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
     
-    let mut input: Input = "Basel".into();
+    let mut input: Input = "".into();
     stdout_var.flush()?;
 
     loop {
@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
                             forecast_data = next_forecast_data;
                         }
                     }
-                    input.clone().with_value("".into());
+                    input.reset();
                 },
                 _ => {
                     input.handle_event(&event);
