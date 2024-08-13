@@ -12,6 +12,7 @@ use ratatui::{
 };
 
 use std::io::{stdout, Result, Write};
+use std::string;
 use ratatui::crossterm::event::Event;
 use tui_input::backend::crossterm::EventHandler;
 use tui_input::Input;
@@ -22,6 +23,7 @@ use json;
 use reqwest::Response;
 
 use itertools::Itertools;
+use json::stringify;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,8 +36,6 @@ async fn main() -> Result<()> {
     response = reqwest::get(format!("https://api.openweathermap.org/data/2.5/forecast?q=Basel&appid={}", api_key)).await.unwrap();
     let mut forecast_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
     
-    println!("{}", current_weather_data);
-
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
@@ -43,6 +43,30 @@ async fn main() -> Result<()> {
     let mut stdout_var = stdout_var.lock();
     terminal.clear()?;
 
+    let temp_x_axis = Axis::default()
+        .title("Time")
+        .style(Style::default().fg(Color::White))
+        .bounds([0.0, 40.0])
+        .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]); 
+
+    let temp_y_axis = Axis::default()
+        .title("Temperature")
+        .style(Style::default().fg(Color::White))
+        .bounds([0.0, 50.0])
+        .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]);
+
+    let rain_x_axis = Axis::default()
+        .title("Time [h]")
+        .style(Style::default().fg(Color::White))
+        .bounds([0.0, 40.0])
+        .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]);
+
+    let rain_y_axis = Axis::default()
+        .title("Rain [mm]")
+        .style(Style::default().fg(Color::White))
+        .bounds([0.0, 10.0])
+        .labels(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+    
     let mut input: Input = "Basel".into();
     stdout_var.flush()?;
 
@@ -54,9 +78,22 @@ async fn main() -> Result<()> {
                 KeyCode::Esc => break,
                 KeyCode::Enter => {
                     response = reqwest::get(&format!("https://api.openweathermap.org/data/2.5/weather?q={}&appid={}", input.value(), api_key)).await.unwrap();
-                    current_weather_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
+                    let next_weather_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
+                    match next_weather_data["main"]["temp"] {
+                        json::JsonValue::Null => {},
+                        _ => {
+                            current_weather_data = next_weather_data;
+                        }
+                    }
                     response = reqwest::get(&format!("https://api.openweathermap.org/data/2.5/forecast?q={}&appid={}", input.value(), api_key)).await.unwrap();
-                    forecast_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
+                    let next_forecast_data = json::parse(response.text().await.unwrap().as_str()).unwrap();
+                    match next_forecast_data["list"].len() {
+                        0 => {},
+                        _ => {
+                            forecast_data = next_forecast_data;
+                        }
+                    }
+                    input.clone().with_value("".into());
                 },
                 _ => {
                     input.handle_event(&event);
@@ -134,18 +171,6 @@ async fn main() -> Result<()> {
                 .style(Style::default().fg(Color::Yellow))
                 .data(forecast_temp_list);
             
-            let temp_x_axis = Axis::default()
-                .title("Time")
-                .style(Style::default().fg(Color::White))
-                .bounds([0.0, 40.0])
-                .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]);
-            
-            let temp_y_axis = Axis::default()
-                .title("Temperature")
-                .style(Style::default().fg(Color::White))
-                .bounds([0.0, 50.0])
-                .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]);
-            
             let temp_chart = Chart::new(Vec::from([forecast_temp_dataset]))
                 .block(
                     Block::default()
@@ -154,8 +179,8 @@ async fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .border_style(Style::default().fg(Color::White)),
                 )
-                .x_axis(temp_x_axis)
-                .y_axis(temp_y_axis)
+                .x_axis(temp_x_axis.clone())
+                .y_axis(temp_y_axis.clone())
                 .style(Style::default().fg(Color::White));
             
             let mut forecast_rain_vec: Vec<(f64, f64)> = Vec::new();
@@ -172,21 +197,9 @@ async fn main() -> Result<()> {
             let forecast_rain_dataset = Dataset::default()
                 .name("Rain")
                 .marker(symbols::Marker::Braille)
-                .graph_type(GraphType::Line)
+                .graph_type(GraphType::Bar)
                 .style(Style::default().fg(Color::Blue))
                 .data(forecast_rain_list);
-            
-            let rain_x_axis = Axis::default()
-                .title("Time")
-                .style(Style::default().fg(Color::White))
-                .bounds([0.0, 40.0])
-                .labels(["0", "5", "10", "15", "20", "25", "30", "35", "40"]);
-            
-            let rain_y_axis = Axis::default()
-                .title("Rain")
-                .style(Style::default().fg(Color::White))
-                .bounds([0.0, 10.0])
-                .labels(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
             
             let rain_chart = Chart::new(Vec::from([forecast_rain_dataset]))
                 .block(
@@ -196,14 +209,14 @@ async fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .border_style(Style::default().fg(Color::White)),
                 )
-                .x_axis(rain_x_axis)
-                .y_axis(rain_y_axis)
+                .x_axis(rain_x_axis.clone())
+                .y_axis(rain_y_axis.clone())
                 .style(Style::default().fg(Color::White));
             
             
 
             frame.render_widget(
-                Paragraph::new(format!("{:.2} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15))
+                Paragraph::new(format!("{:.1} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15))
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
                     .block(Block::default().borders(Borders::ALL).title("Weather"))
                     .alignment(Alignment::Center),
@@ -235,7 +248,7 @@ async fn main() -> Result<()> {
             );
             
             frame.render_widget(
-                Paragraph::new(format!("Temperature: {:.2} C° Feels like: {:.2} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15, current_weather_data["main"]["feels_like"].as_f64().unwrap()-273.15))
+                Paragraph::new(format!("Temperature: {:.1} C° Feels like: {:.1} C°", current_weather_data["main"]["temp"].as_f64().unwrap()-273.15, current_weather_data["main"]["feels_like"].as_f64().unwrap()-273.15))
                     .style(Style::default().fg(Color::White).bg(Color::Blue))
                     .block(Block::default().borders(Borders::ALL).title("Temperature"))
                     .alignment(Alignment::Center),
